@@ -86,7 +86,7 @@ class ContinuousActionContextualBanditModel:
         if self.categorize_actions:
             action = self._get_actions_one_hot()
         x = np.append(action, context).reshape(1, -1)
-        cost = np.array([0])
+        cost = np.array([1])
         self.reg.fit(x, cost)
     
     def _log_example(self, context, action, cost, prob):
@@ -154,7 +154,7 @@ class ContinuousActionContextualBanditModel:
             Dictionary with actions as keys and costs as values.
         """
         costs_per_action = {}
-        for action in actions:
+        for action in self._get_actions():
             if self.categorize_actions:
                 action_one_hot = self._get_actions_one_hot(action)
                 x = np.append(action_one_hot, context)
@@ -187,11 +187,10 @@ class ContinuousActionContextualBanditModel:
         (action, prob) : tuple
             The predicted action with the probability that it was selected.
         """
-        actions = self._get_actions()
         if self.reg is None:
             self._init_regressor(context)
             if self.initial_action:
-                closest_action = min(actions, key=lambda x:abs(x-self.initial_action))
+                closest_action = min(self._get_actions(), key=lambda x:abs(x-self.initial_action))
                 return closest_action, 1.0
         costs_per_action = self.get_costs_per_action(context)
         if np.random.random() < epsilon:
