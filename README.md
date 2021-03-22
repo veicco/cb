@@ -71,7 +71,7 @@ for i in range(1000):
 plot(costs_1, costs_2, actions_1, actions_2)
 ```
 
-![Costs and chosen actions over time.](https://github.com/veicco/cacb/blob/master/img/plot.jpg?raw=true)
+![Costs and chosen actions over time.](https://github.com/veicco/cacb/blob/master/img/plot.png?raw=true)
 
 ## Development
 
