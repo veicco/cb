@@ -222,7 +222,7 @@ class ContinuousActionContextualBanditModel:
         self._log_example(context, action, cost, prob)
         data = self.logged_data
         if self.memory is not None:
-            data = data[:self.memory]
+            data = data[-self.memory:]
         prob = data[:,0]
         ips = 1/prob
         cost = data[:,1]

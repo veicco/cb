@@ -15,7 +15,7 @@ or one of its neighbours (explore).
 
 ## Installation
 
-```
+```bash
 pip install git+https://github.com/veicco/cacb.git
 ```
 
