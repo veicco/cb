@@ -24,7 +24,7 @@ mock_file = "./tests/mock.csv"
 
 class ContinuousActionContextualBanditModelTest(unittest.TestCase):
     def setUp(self):
-        mock_log_data.to_csv(mock_file, header=None, index=None)
+        mock_log_data.to_csv(mock_file, header=None, index=None)  # type: ignore
 
     def test_get_actions(self):
         actions1 = ContinuousActionContextualBanditModel(
@@ -101,17 +101,31 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         )
 
         # lowest cost exists
-        costs_per_action = {10: 100, 11: 100, 12: 90, 13: 100, 14: 100, 15: 100}
+        costs_per_action = {
+            10.0: 100.0,
+            11.0: 100.0,
+            12.0: 90.0,
+            13.0: 100.0,
+            14.0: 100.0,
+            15.0: 100.0,
+        }
         epsilon = 0.10
         action, prob = cacb._exploit(costs_per_action, epsilon)
-        self.assertEqual(action, 12)
+        self.assertEqual(action, 12.0)
         self.assertEqual(prob, 0.90)
 
         # no clear winner => should choose the first of the best
-        costs_per_action = {10: 100, 11: 90, 12: 100, 13: 90, 14: 90, 15: 100}
+        costs_per_action = {
+            10.0: 100.0,
+            11.0: 90.0,
+            12.0: 100.0,
+            13.0: 90.0,
+            14.0: 90.0,
+            15.0: 100.0,
+        }
         epsilon = 0.10
         action, prob = cacb._exploit(costs_per_action, epsilon)
-        self.assertEqual(action, 11)
+        self.assertEqual(action, 11.0)
         self.assertEqual(prob, 0.90)
 
     def test_explore(self):
@@ -121,7 +135,14 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
             action_width=1,
         )
         # the best action is 12
-        costs_per_action = {10: 100, 11: 100, 12: 90, 13: 100, 14: 100, 15: 100}
+        costs_per_action = {
+            10.0: 100.0,
+            11.0: 100.0,
+            12.0: 90.0,
+            13.0: 100.0,
+            14.0: 100.0,
+            15.0: 100.0,
+        }
 
         # exploration width = 1
         epsilon = 0.10
@@ -148,7 +169,14 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertIn(action, [10, 11, 13, 14])
 
         # exploration width = 1, optimum in the end
-        costs_per_action = {10: 90, 11: 100, 12: 100, 13: 100, 14: 100, 15: 100}
+        costs_per_action = {
+            10.0: 90.0,
+            11.0: 100.0,
+            12.0: 100.0,
+            13.0: 100.0,
+            14.0: 100.0,
+            15.0: 100.0,
+        }
         epsilon = 0.10
         exploration_width = 1
         action, prob = cacb._explore(costs_per_action, epsilon, exploration_width)
@@ -156,7 +184,14 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertEqual(action, 11)
 
         # exploration width = 1, optimum in the left end, left direction
-        costs_per_action = {10: 90, 11: 100, 12: 100, 13: 100, 14: 100, 15: 100}
+        costs_per_action = {
+            10.0: 90.0,
+            11.0: 100.0,
+            12.0: 100.0,
+            13.0: 100.0,
+            14.0: 100.0,
+            15.0: 100.0,
+        }
         epsilon = 0.10
         exploration_width = 1
         action, prob = cacb._explore(
@@ -174,7 +209,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         )
         self.assertEqual(cacb.logged_data.shape[0], 5)
         cacb.learn(np.array([0, 0, 1]), 0, 100, 0.90)
-        log_file_data = pd.read_csv(mock_file, header=None).values
+        log_file_data = pd.read_csv(mock_file, header=None).values  # type: ignore
         self.assertEqual(log_file_data.shape[0], 6)
 
     def test_existing_data_and_memory(self):

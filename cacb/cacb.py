@@ -1,6 +1,8 @@
 import os
 import numpy as np
 import pandas as pd
+from typing import Dict, Optional, Tuple, List
+from cacb.types import RegressionModel, Action, Cost, Prob
 from sklearn.linear_model import LinearRegression
 from collections import deque
 from io import StringIO
@@ -64,15 +66,15 @@ class ContinuousActionContextualBanditModel:
 
     def __init__(
         self,
-        min_value,
-        max_value,
-        action_width,
-        memory=None,
-        initial_action=None,
-        data_file=None,
-        regression_model=None,
-        categorize_actions=False,
-        decay_rate=1.0,
+        min_value: Action,
+        max_value: Action,
+        action_width: Action,
+        memory: int = None,
+        initial_action: Action = None,
+        data_file: str = None,
+        regression_model: RegressionModel = None,
+        categorize_actions: bool = False,
+        decay_rate: float = 1.0,
     ):
         self.min_value = min_value
         self.max_value = max_value
@@ -90,30 +92,32 @@ class ContinuousActionContextualBanditModel:
         )
         self.reg = None
 
-    def _read_logged_data_file(self, data_file, memory):
+    def _read_logged_data_file(
+        self, data_file: str, memory: Optional[int]
+    ) -> np.ndarray:
         if not os.path.exists(data_file):
             open(data_file, "w").close()
             return np.array([])
         if os.path.getsize(data_file) == 0:
             return np.array([])
         if memory is None:
-            return pd.read_csv(data_file, header=None).values
+            return pd.read_csv(data_file, header=None).values  # type: ignore
         with open(data_file, "r") as f:
             q = deque(f, memory)
-        return pd.read_csv(StringIO("".join(q)), header=None).values
+        return pd.read_csv(StringIO("".join(q)), header=None).values  # type: ignore
 
-    def _get_actions(self):
+    def _get_actions(self) -> List[Action]:
         num_actions = int((self.max_value - self.min_value) / self.action_width + 1)
         return [self.min_value + i * self.action_width for i in range(num_actions)]
 
-    def _get_actions_one_hot(self, action=None):
+    def _get_actions_one_hot(self, action: Action = None) -> np.ndarray:
         actions = self._get_actions()
         actions_one_hot = np.zeros(shape=len(actions))
         if action is not None:
             actions_one_hot[actions.index(action)] = 1
         return actions_one_hot
 
-    def _init_regressor(self, context):
+    def _init_regressor(self, context: np.ndarray):
         if self.regression_model is not None:
             self.reg = self.regression_model
         else:
@@ -125,11 +129,12 @@ class ContinuousActionContextualBanditModel:
         cost = np.array([1])
         self.reg.fit(x, cost)
 
-    def _log_example(self, context, action, cost, prob):
+    def _log_example(self, context: np.ndarray, action: Action, cost: Cost, prob: Prob):
         data = self.logged_data
+        a = action
         if self.categorize_actions:
-            action = self._get_actions_one_hot(action)
-        x = np.append(action, context)
+            a = self._get_actions_one_hot(action)
+        x = np.append(a, context)
         example = np.append([prob, cost], x)
         if self.data_file:
             with open(self.data_file, "a") as f:
@@ -143,14 +148,22 @@ class ContinuousActionContextualBanditModel:
                 data = data[-self.memory :]
             self.logged_data = data
 
-    def _exploit(self, costs_per_action, epsilon):
-        best_action = min(costs_per_action, key=costs_per_action.get)
+    def _exploit(
+        self, costs_per_action: Dict[Action, Cost], epsilon: Prob
+    ) -> Tuple[Action, Prob]:
+        best_action = min(costs_per_action, key=costs_per_action.get)  # type: ignore
         prob = 1 - epsilon
         return best_action, prob
 
-    def _explore(self, costs_per_action, epsilon, exploration_width, direction=None):
+    def _explore(
+        self,
+        costs_per_action: Dict[Action, Cost],
+        epsilon: Prob,
+        exploration_width: int,
+        direction: str = None,
+    ) -> Tuple[Action, Prob]:
         actions = self._get_actions()
-        best_action = min(costs_per_action, key=costs_per_action.get)
+        best_action = min(costs_per_action, key=costs_per_action.get)  # type: ignore
         best_idx = actions.index(best_action)
         if direction == "left":
             neighbours_idx = np.arange(best_idx - exploration_width, best_idx)
@@ -172,7 +185,9 @@ class ContinuousActionContextualBanditModel:
         }
         return self._sample_action(costs_per_possible_action, epsilon)
 
-    def _sample_action(self, costs_per_action, epsilon):
+    def _sample_action(
+        self, costs_per_action: Dict[Action, Cost], epsilon: Prob
+    ) -> Tuple[Action, Prob]:
         actions = list(costs_per_action.keys())
         costs = list(costs_per_action.values())
         max_cost = max(np.abs(costs))
@@ -184,17 +199,18 @@ class ContinuousActionContextualBanditModel:
             sum_prob += prob
             if sum_prob > draw:
                 return actions[idx], prob * epsilon
+        raise ValueError("Invalid pmf: could not sample action.")
 
-    def _get_previous_move(self, epsilon):
+    def _get_previous_move(self, epsilon: Prob) -> Tuple[bool, Cost, Action]:
         if self.logged_data.shape[0] < 2:
-            return (0, 0, 0)
+            return (False, 0, 0)
         last_2 = self.logged_data[-2:]
         explored = last_2[-1][0] != (1 - epsilon)
         cost_diff = last_2[-1][1] - last_2[-2][1]
         action_diff = last_2[-1][2] - last_2[-2][2]
         return explored, cost_diff, action_diff
 
-    def get_costs_per_action(self, context):
+    def get_costs_per_action(self, context: np.ndarray) -> Dict[Action, Cost]:
         """
         Get the predicted cost for each of the actions given the
         provided context.
@@ -220,8 +236,12 @@ class ContinuousActionContextualBanditModel:
         return costs_per_action
 
     def predict(
-        self, context, epsilon=0.05, exploration_width=1, exploration_strategy="smart"
-    ):
+        self,
+        context: np.ndarray,
+        epsilon: Prob = 0.05,
+        exploration_width: int = 1,
+        exploration_strategy: str = "smart",
+    ) -> Tuple[Action, Prob]:
         """
         Predict an action given a context.
 
@@ -255,7 +275,7 @@ class ContinuousActionContextualBanditModel:
             The predicted action with the probability that it was selected.
         """
 
-        def _get_direction(action_change):
+        def _get_direction(action_change: Action) -> Optional[str]:
             if action_change < 0:
                 return "left"
             elif action_change > 0:
@@ -271,7 +291,7 @@ class ContinuousActionContextualBanditModel:
             self._init_regressor(context)
             if self.initial_action:
                 closest_action = min(
-                    self._get_actions(), key=lambda x: abs(x - self.initial_action)
+                    self._get_actions(), key=lambda x: abs(x - self.initial_action)  # type: ignore
                 )
                 return closest_action, 1.0
         costs_per_action = self.get_costs_per_action(context)
@@ -293,7 +313,7 @@ class ContinuousActionContextualBanditModel:
             return self._explore(costs_per_action, epsilon, exploration_width)
         return self._exploit(costs_per_action, epsilon)
 
-    def learn(self, context, action, cost, prob):
+    def learn(self, context: np.ndarray, action: Action, cost: Cost, prob: Prob):
         """
         Write a new training example in the logged data and re-train
         the regression model using the accumulated training data.
@@ -317,14 +337,14 @@ class ContinuousActionContextualBanditModel:
             self._init_regressor(context)
         self._log_example(context, action, cost, prob)
         data = self.logged_data
-        prob = data[:, 0]
-        ips = 1 / prob
+        probs = data[:, 0]
+        ips = 1 / probs
         weights = ips * (np.linspace(0, 1, len(ips) + 1) ** self.decay_rate)[1:]
-        cost = data[:, 1]
+        costs = data[:, 1]
         x = data[:, 2:]
-        self.reg.fit(x, cost, sample_weight=weights)
+        self.reg.fit(x, costs, sample_weight=weights)
 
-    def get_logged_data_df(self):
+    def get_logged_data_df(self) -> pd.DataFrame:
         """
         Get the logged training data as a Pandas DataFrame.
 
