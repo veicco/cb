@@ -2,8 +2,9 @@ import os
 import numpy as np
 import pandas as pd
 from typing import Dict, Optional, Tuple, List
-from cacb.types import RegressionModel, Action, Cost, Prob
+from cacb.types import Action, Cost, Prob
 from sklearn.linear_model import LinearRegression
+from sklearn.base import RegressorMixin
 from collections import deque
 from io import StringIO
 
@@ -72,7 +73,7 @@ class ContinuousActionContextualBanditModel:
         memory: int = None,
         initial_action: Action = None,
         data_file: str = None,
-        regression_model: RegressionModel = None,
+        regression_model: RegressorMixin = None,
         categorize_actions: bool = False,
         decay_rate: float = 1.0,
     ):

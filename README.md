@@ -16,7 +16,7 @@ or one of its neighbours (explore).
 ## Installation
 
 ```bash
-pip install git+https://github.com/veicco/cacb.git@v0.1.2
+pip install git+https://github.com/veicco/cacb.git@v0.1.3
 ```
 
 ## Example
