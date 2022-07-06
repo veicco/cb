@@ -2,16 +2,18 @@
 
 ## About
 
-Contextual Bandit (1-step reinforcement learning) model with
-continuous action space.
+Contextual Bandit (1-step reinforcement learning) implementation with Python.
 
-CACB learns a policy from (context, action, cost) triplets to choose
-an action so as to minimize the expected cost given the context. The
-model discretizes the provided action space between the minimum and
-the maximum and reduces to a supervised regression task where the cost
-is predicted separately for each action; With the expected cost of
-each action, the policy returns either the least costly action (exploit)
-or one of its neighbours (explore).
+CB learns a policy from (context, action, cost) triplets to choose
+an action so as to minimize the expected cost given the context. The model 
+reduces to a supervised regression task where the cost is predicted separately 
+for each action, choosing either the least costly action (exploit) or one
+of the suboptimal actions in order to explore.
+
+This package includes a model for both discrete actions and continuous actions.
+The continuous actions model discretizes the provided action space between the 
+minimum and the maximum, and it explores by choosing one of the neighbours
+of the optimal action.
 
 ## Installation
 
