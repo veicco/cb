@@ -1,4 +1,4 @@
-# Contextual Bandits with Discreate or Continuous Actions
+# CB: Contextual Bandits with Python
 
 ## About
 
