@@ -18,7 +18,7 @@ of the optimal action.
 ## Installation
 
 ```bash
-pip install git+https://github.com/veicco/cb.git@v0.2.0 
+pip install git+https://github.com/veicco/cb.git@v0.2.1 
 ```
 
 ## Examples
