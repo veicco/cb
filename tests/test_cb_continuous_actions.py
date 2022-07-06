@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import os
 from numpy.testing import assert_array_equal
-from cacb.cacb import ContinuousActionContextualBanditModel
+from cb.continuous_actions import ContextualBanditContinuousActionsModel
 
 
 np.random.seed(123)
@@ -22,26 +22,26 @@ mock_log_data = pd.DataFrame(
 mock_file = "./tests/mock.csv"
 
 
-class ContinuousActionContextualBanditModelTest(unittest.TestCase):
+class ContextualBanditContinuousActionsModelTest(unittest.TestCase):
     def setUp(self):
         mock_log_data.to_csv(mock_file, header=None, index=None)  # type: ignore
 
     def test_get_actions(self):
-        actions1 = ContinuousActionContextualBanditModel(
+        actions1 = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
         )._get_actions()
         self.assertListEqual(actions1, [10, 11, 12, 13, 14, 15])
 
-        actions2 = ContinuousActionContextualBanditModel(
+        actions2 = ContextualBanditContinuousActionsModel(
             min_value=-10,
             max_value=-5,
             action_width=1,
         )._get_actions()
         self.assertListEqual(actions2, [-10, -9, -8, -7, -6, -5])
 
-        actions3 = ContinuousActionContextualBanditModel(
+        actions3 = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=2,
@@ -49,7 +49,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertListEqual(actions3, [10, 12, 14])
 
     def test_get_actions_one_hot(self):
-        actions_one_hot = ContinuousActionContextualBanditModel(
+        actions_one_hot = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
@@ -63,7 +63,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         prob = 0.75
 
         # uncategorized actions
-        cacb_1 = ContinuousActionContextualBanditModel(
+        cacb_1 = ContextualBanditContinuousActionsModel(
             min_value=10, max_value=15, action_width=1, categorize_actions=False
         )
         cacb_1._log_example(context, action, cost, prob)
@@ -72,7 +72,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         )
 
         # categorized actions
-        cacb_2 = ContinuousActionContextualBanditModel(
+        cacb_2 = ContextualBanditContinuousActionsModel(
             min_value=10, max_value=15, action_width=1, categorize_actions=True
         )
         cacb_2._log_example(context, action, cost, prob)
@@ -94,7 +94,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         )
 
     def test_exploit(self):
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
@@ -129,7 +129,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertEqual(prob, 0.90)
 
     def test_explore(self):
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
@@ -201,7 +201,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertEqual(action, 10)
 
     def test_existing_data(self):
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
@@ -213,12 +213,12 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertEqual(log_file_data.shape[0], 6)
 
     def test_existing_data_and_memory(self):
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10, max_value=15, action_width=1, data_file=mock_file, memory=10
         )
         self.assertEqual(cacb.logged_data.shape[0], 5)
 
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10, max_value=15, action_width=1, data_file=mock_file, memory=3
         )
         self.assertEqual(cacb.logged_data.shape[0], 3)
@@ -228,7 +228,7 @@ class ContinuousActionContextualBanditModelTest(unittest.TestCase):
         self.assertListEqual(list(cacb.logged_data[-1]), [0.0333, 105, 1, 0, 1, 1])
 
     def test_get_previous_move(self):
-        cacb = ContinuousActionContextualBanditModel(
+        cacb = ContextualBanditContinuousActionsModel(
             min_value=10,
             max_value=15,
             action_width=1,
