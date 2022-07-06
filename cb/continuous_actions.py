@@ -1,22 +1,19 @@
-import os
 import numpy as np
 import pandas as pd
-from typing import Dict, Optional, Tuple, List
-from cacb.types import Action, Cost, Prob
 from sklearn.linear_model import LinearRegression
+from typing import List, Dict, Tuple, Optional
 from sklearn.base import RegressorMixin
-from collections import deque
-from io import StringIO
+from cb.base import ContextualBanditBase, Action, Cost, Prob
 
 
-class ContinuousActionContextualBanditModel:
+class ContextualBanditContinuousActionsModel(ContextualBanditBase):
     """
     Contextual Bandit (1-step reinforcement learning) model with
-    continuous action space.
+    continuous action space. Learns a policy from (context, action, cost)
+    triplets to choose an action so as to minimize the expected cost given the
+    context.
 
-    CACB learns a policy from (context, action, cost) triplets to choose
-    an action so as to minimize the expected cost given the context. The
-    model discretizes the provided action space between the minimum and
+    The model discretizes the provided action space between the minimum and
     the maximum and reduces to a supervised regression task where the cost
     is predicted separately for each action; With the expected cost of
     each action, the policy returns either the least costly action (exploit)
@@ -77,46 +74,17 @@ class ContinuousActionContextualBanditModel:
         categorize_actions: bool = False,
         decay_rate: float = 1.0,
     ):
+        super(ContextualBanditContinuousActionsModel, self).__init__(
+            memory, initial_action, data_file, regression_model, decay_rate
+        )
         self.min_value = min_value
         self.max_value = max_value
         self.action_width = action_width
-        self.memory = memory
-        self.initial_action = initial_action
-        self.data_file = data_file
-        self.regression_model = regression_model
         self.categorize_actions = categorize_actions
-        self.decay_rate = decay_rate
-        self.logged_data = (
-            self._read_logged_data_file(data_file, memory)
-            if data_file
-            else np.array([])
-        )
-        self.reg = None
-
-    def _read_logged_data_file(
-        self, data_file: str, memory: Optional[int]
-    ) -> np.ndarray:
-        if not os.path.exists(data_file):
-            open(data_file, "w").close()
-            return np.array([])
-        if os.path.getsize(data_file) == 0:
-            return np.array([])
-        if memory is None:
-            return pd.read_csv(data_file, header=None).values  # type: ignore
-        with open(data_file, "r") as f:
-            q = deque(f, memory)
-        return pd.read_csv(StringIO("".join(q)), header=None).values  # type: ignore
 
     def _get_actions(self) -> List[Action]:
         num_actions = int((self.max_value - self.min_value) / self.action_width + 1)
         return [self.min_value + i * self.action_width for i in range(num_actions)]
-
-    def _get_actions_one_hot(self, action: Action = None) -> np.ndarray:
-        actions = self._get_actions()
-        actions_one_hot = np.zeros(shape=len(actions))
-        if action is not None:
-            actions_one_hot[actions.index(action)] = 1
-        return actions_one_hot
 
     def _init_regressor(self, context: np.ndarray):
         if self.regression_model is not None:
@@ -185,22 +153,6 @@ class ContinuousActionContextualBanditModel:
             key: costs_per_action[key] for key in possible_actions
         }
         return self._sample_action(costs_per_possible_action, epsilon)
-
-    def _sample_action(
-        self, costs_per_action: Dict[Action, Cost], epsilon: Prob
-    ) -> Tuple[Action, Prob]:
-        actions = list(costs_per_action.keys())
-        costs = list(costs_per_action.values())
-        max_cost = max(np.abs(costs))
-        rewards_scaled = [-cost / max_cost for cost in costs]
-        pmf = np.exp(rewards_scaled) / sum(np.exp(rewards_scaled))
-        draw = np.random.random()
-        sum_prob = 0.0
-        for idx, prob in enumerate(pmf):
-            sum_prob += prob
-            if sum_prob > draw:
-                return actions[idx], prob * epsilon
-        raise ValueError("Invalid pmf: could not sample action.")
 
     def _get_previous_move(self, epsilon: Prob) -> Tuple[bool, Cost, Action]:
         if self.logged_data.shape[0] < 2:
@@ -313,37 +265,6 @@ class ContinuousActionContextualBanditModel:
         if np.random.random() < epsilon:
             return self._explore(costs_per_action, epsilon, exploration_width)
         return self._exploit(costs_per_action, epsilon)
-
-    def learn(self, context: np.ndarray, action: Action, cost: Cost, prob: Prob):
-        """
-        Write a new training example in the logged data and re-train
-        the regression model using the accumulated training data.
-
-        Parameters
-        ----------
-        context : numpy.array([...])
-            Context/feature set of the training example.
-
-        action : int of float
-            Action of the training example.
-
-        cost : int or float
-            Cost of the training example.
-
-        prob : float
-            Logged probability that the given action was chosen when it was applied.
-            Needed in order to do IPS weighting when learning the policy.
-        """
-        if self.reg is None:
-            self._init_regressor(context)
-        self._log_example(context, action, cost, prob)
-        data = self.logged_data
-        probs = data[:, 0]
-        ips = 1 / probs
-        weights = ips * (np.linspace(0, 1, len(ips) + 1) ** self.decay_rate)[1:]
-        costs = data[:, 1]
-        x = data[:, 2:]
-        self.reg.fit(x, costs, sample_weight=weights)
 
     def get_logged_data_df(self) -> pd.DataFrame:
         """

@@ -1,3 +1,3 @@
 from setuptools import setup
 
-setup(name="cacb", version="0.1.3", packages=["cacb"])
+setup(name="contextualbandit", version="0.2.0", packages=["cb"])
