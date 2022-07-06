@@ -93,7 +93,7 @@ class ContextualBanditContinuousActionsModel(ContextualBanditBase):
             self.reg = LinearRegression()
         action = 0
         if self.categorize_actions:
-            action = self._get_actions_one_hot()
+            action = self._get_actions_one_hot(self._get_actions())
         x = np.append(action, context).reshape(1, -1)
         cost = np.array([1])
         self.reg.fit(x, cost)
@@ -102,7 +102,7 @@ class ContextualBanditContinuousActionsModel(ContextualBanditBase):
         data = self.logged_data
         a = action
         if self.categorize_actions:
-            a = self._get_actions_one_hot(action)
+            a = self._get_actions_one_hot(self._get_actions(), action)
         x = np.append(a, context)
         example = np.append([prob, cost], x)
         if self.data_file:
@@ -181,7 +181,7 @@ class ContextualBanditContinuousActionsModel(ContextualBanditBase):
         costs_per_action = {}
         for action in self._get_actions():
             if self.categorize_actions:
-                action_one_hot = self._get_actions_one_hot(action)
+                action_one_hot = self._get_actions_one_hot(self._get_actions(), action)
                 x = np.append(action_one_hot, context)
             else:
                 x = np.append(action, context)

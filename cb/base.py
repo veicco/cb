@@ -53,8 +53,7 @@ class ContextualBanditBase:
     def _get_actions(self) -> List[Action]:
         pass
 
-    def _get_actions_one_hot(self, action: Action = None) -> np.ndarray:
-        actions = self._get_actions()
+    def _get_actions_one_hot(self, actions, action: Action = None) -> np.ndarray:
         actions_one_hot = np.zeros(shape=len(actions))
         if action is not None:
             actions_one_hot[actions.index(action)] = 1
@@ -65,14 +64,14 @@ class ContextualBanditBase:
             self.reg = self.regression_model
         else:
             self.reg = LinearRegression()
-        action = self._get_actions_one_hot()
+        action = self._get_actions_one_hot(self._get_actions())
         x = np.append(action, context).reshape(1, -1)
         cost = np.array([1])
         self.reg.fit(x, cost)
 
     def _log_example(self, context: np.ndarray, action: Action, cost: Cost, prob: Prob):
         data = self.logged_data
-        a = self._get_actions_one_hot(action)
+        a = self._get_actions_one_hot(self._get_actions(), action)
         x = np.append(a, context)
         example = np.append([prob, cost], x)
         if self.data_file:
@@ -115,15 +114,6 @@ class ContextualBanditBase:
                 return actions[idx], prob * epsilon
         raise ValueError("Invalid pmf: could not sample action.")
 
-    def _get_previous_move(self, epsilon: Prob) -> Tuple[bool, Cost, Action]:
-        if self.logged_data.shape[0] < 2:
-            return (False, 0, 0)
-        last_2 = self.logged_data[-2:]
-        explored = last_2[-1][0] != (1 - epsilon)
-        cost_diff = last_2[-1][1] - last_2[-2][1]
-        action_diff = last_2[-1][2] - last_2[-2][2]
-        return explored, cost_diff, action_diff
-
     def get_costs_per_action(self, context: np.ndarray) -> Dict[Action, Cost]:
         """
         Get the predicted cost for each of the actions given the
@@ -141,7 +131,7 @@ class ContextualBanditBase:
         """
         costs_per_action = {}
         for action in self._get_actions():
-            action_one_hot = self._get_actions_one_hot(action)
+            action_one_hot = self._get_actions_one_hot(self._get_actions(), action)
             x = np.append(action_one_hot, context)
             costs_per_action[action] = self.reg.predict(x.reshape(1, -1)).reshape(-1)[0]
         return costs_per_action
